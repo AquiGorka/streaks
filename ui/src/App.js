@@ -1,15 +1,78 @@
 import { useState, useEffect } from "react"
 
-function useStreak() {
+function useStreak({ uid }) {
   const [isLoading, setIsLoading] = useState(true)
+  const [streak, setStreak] = useState(0)
+  const [canClaimToday, setCanClaimToday] = useState(false)
+  const [streakError, setStreakError] = useState(false)
 
-  return { isLoading }
+  useEffect(() => {
+    if (!uid) {
+      return
+    }
+
+    const run = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/auth/streaks/${uid}`)
+        const { streak, canClaimToday } = await res.json()
+        setCanClaimToday(canClaimToday)
+        setStreak(streak)
+      } catch (err) {
+        console.log("Error fetching streak:", err)
+        setStreakError(true)
+      }
+
+      setIsLoading(false)
+    }
+    run()
+  }, [uid])
+
+  return {
+    isLoading,
+    canClaimToday,
+    streak,
+    streakError,
+    updateStreak: setStreak,
+  }
 }
 
-function useClaim() {
+function useClaim({ uid, updateStreak }) {
+  const [claimed, setClaimed] = useState(false)
   const [isClaiming, setIsClaiming] = useState(false)
+  const [coins, setCoins] = useState(0)
+  const [bonus, setBonus] = useState([])
+  const [claimError, setClaimError] = useState(false)
+  const [newStreak, setNewStreak] = useState(false)
 
-  return { isClaiming }
+  const handleClaim = async () => {
+    try {
+      setIsClaiming(true)
+      const res = await fetch("http://localhost:3000/auth/streak", {
+        method: "POST",
+        body: JSON.stringify({ uid }),
+      })
+      const { streak, coins, bonus } = await res.json()
+      setCoins(coins)
+      setBonus(bonus)
+      setNewStreak(streak === 1)
+      updateStreak(streak)
+      setClaimed(true)
+    } catch (err) {
+      console.log("Error claiming:", err)
+      setClaimError(true)
+    }
+    setIsClaiming(false)
+  }
+
+  return {
+    isClaiming,
+    coins,
+    bonus,
+    claimError,
+    handleClaim,
+    newStreak,
+    claimed,
+  }
 }
 
 function useAuth() {
@@ -22,8 +85,8 @@ function useAuth() {
 
 function useApp() {
   const Auth = useAuth()
-  const Streak = useStreak()
-  const Claim = useClaim()
+  const Streak = useStreak({ uid: Auth.uid })
+  const Claim = useClaim({ updateStreak: Streak.updateStreak })
 
   return { ...Auth, ...Streak, ...Claim }
 }
@@ -44,8 +107,17 @@ function App() {
     displayName,
     // streak
     isLoading,
+    canClaimToday,
+    streak,
+    streakError,
     // claim
     isClaiming,
+    claimError,
+    coins,
+    bonus,
+    handleClaim,
+    newStreak,
+    claimed,
   } = useApp()
 
   if (isLoading) {
@@ -58,17 +130,32 @@ function App() {
 
   return (
     <Layout isSignedIn={isSignedIn} displayName={displayName}>
-      <div>current streak</div>
-      <div>start claiming today</div>
+      {streak !== 0 && <div>current streak: {streak}</div>}
+      {streak === 0 && <div>start claiming today</div>}
+      {streakError && <div>error: try again in a few minutes</div>}
+
       <div>
-        <button>claim today</button>
+        <button onClick={handleClaim} disabled={!canClaimToday}>
+          claim today
+        </button>
       </div>
       {isClaiming && <div>claiming...</div>}
-      <div>error: try again in a few minutes</div>
-      <div>You cannot claim nore coins today</div>
-      <div>You got M coins!</div>
-      <div>And a B bonus!</div>
-      <div>And started a streak!</div>
+      {claimError && <div>You cannot claim any more coins today</div>}
+
+      {claimed && canClaimToday && (
+        <>
+          <div>You got {coins} coins!</div>
+          <div>
+            <div>And a bonus!</div>
+            <ul>
+              {bonus.map((item, index) => (
+                <li key={`${item}-${index}`}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          {newStreak && <div>And started a streak!</div>}
+        </>
+      )}
     </Layout>
   )
 }
