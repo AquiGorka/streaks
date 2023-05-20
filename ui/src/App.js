@@ -93,7 +93,6 @@ function useTotalCoins({ uid }) {
       try {
         const res = await fetch(`http://localhost:3000/auth/coins/${uid}`)
         const { coins } = await res.json()
-        console.log({ coins })
         setTotalCoins(coins)
       } catch (err) {
         console.log("Error fetching coins:", err)
@@ -109,11 +108,24 @@ function useTotalCoins({ uid }) {
 }
 
 function useAuth() {
-  const [isSignedIn, setIsSignedIn] = useState(true)
-  const [uid, setUid] = useState("user-id")
-  const [displayName, setDisplayName] = useState("Name")
+  const [isSignedIn, setIsSignedIn] = useState(
+    localStorage.getItem("isSignedIn") == "true" || false,
+  )
+  const [uid, setUid] = useState(localStorage.getItem("uid") || "")
+  const [displayName, setDisplayName] = useState(
+    localStorage.getItem("displayName") || "",
+  )
 
-  return { isSignedIn, uid, displayName }
+  const updateAuth = (uid, displayName, isSignedIn) => {
+    setUid(uid)
+    setDisplayName(displayName)
+    setIsSignedIn(isSignedIn)
+    localStorage.setItem("isSignedIn", String(isSignedIn))
+    localStorage.setItem("displayName", displayName)
+    localStorage.setItem("uid", uid)
+  }
+
+  return { isSignedIn, uid, displayName, updateAuth }
 }
 
 function useApp() {
@@ -129,11 +141,54 @@ function useApp() {
   return { ...Auth, ...Coins, ...Streak, ...Claim }
 }
 
-function Layout({ children, isSignedIn, displayName, totalCoins }) {
+function Layout({ children, isSignedIn, displayName, totalCoins, updateAuth }) {
+  const [uidText, setUidText] = useState("")
+  const [displayNameText, setDisplayNameText] = useState("")
+
+  const handleChangeUidText = ({ currentTarget: { value } }) => {
+    setUidText(value)
+  }
+
+  const handleChangeDisplayNameText = ({ currentTarget: { value } }) => {
+    setDisplayNameText(value)
+  }
+
+  const handleSubmit = () => {
+    updateAuth(uidText, displayNameText, true)
+  }
+
+  const handleLogout = () => {
+    updateAuth("", "", false)
+  }
+
+  if (!isSignedIn) {
+    return (
+      <form onSubmit={handleSubmit}>
+        <div>Fake login (values will persist)</div>
+        <input
+          value={uidText}
+          onChange={handleChangeUidText}
+          placeholder="User id"
+          required
+        />
+        <input
+          value={displayNameText}
+          onChange={handleChangeDisplayNameText}
+          placeholder="Display name"
+          required
+        />
+        <button>Sign in</button>
+      </form>
+    )
+  }
+
   return (
     <div>
       <div>{displayName}</div>
       <div>Coins: {totalCoins}</div>
+      <div>
+        <button onClick={handleLogout}>Log out</button>
+      </div>
       <div>{children}</div>
     </div>
   )
@@ -144,6 +199,7 @@ function App() {
     // auth
     isSignedIn,
     displayName,
+    updateAuth,
     // streak
     isLoading,
     canClaimToday,
@@ -167,6 +223,7 @@ function App() {
         isSignedIn={isSignedIn}
         displayName={displayName}
         totalCoins={totalCoins}
+        updateAuth={updateAuth}
       >
         <div>loading...</div>
       </Layout>
@@ -178,6 +235,7 @@ function App() {
       isSignedIn={isSignedIn}
       displayName={displayName}
       totalCoins={totalCoins}
+      updateAuth={updateAuth}
     >
       {streak !== 0 && <div>current streak: {streak}</div>}
       {streak === 0 && canClaimToday && <div>start claiming today</div>}
