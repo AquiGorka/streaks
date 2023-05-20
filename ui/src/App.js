@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react"
 
+import Auth from "./Auth"
+import Layout from "./Layout"
+import Streak from "./Streak"
+import Claim from "./Claim"
+
 function useStreak({ uid }) {
   const [isLoading, setIsLoading] = useState(true)
   const [streak, setStreak] = useState(0)
@@ -109,7 +114,7 @@ function useTotalCoins({ uid }) {
 
 function useAuth() {
   const [isSignedIn, setIsSignedIn] = useState(
-    localStorage.getItem("isSignedIn") == "true" || false,
+    localStorage.getItem("isSignedIn") === "true" || false,
   )
   const [uid, setUid] = useState(localStorage.getItem("uid") || "")
   const [displayName, setDisplayName] = useState(
@@ -141,59 +146,6 @@ function useApp() {
   return { ...Auth, ...Coins, ...Streak, ...Claim }
 }
 
-function Layout({ children, isSignedIn, displayName, totalCoins, updateAuth }) {
-  const [uidText, setUidText] = useState("")
-  const [displayNameText, setDisplayNameText] = useState("")
-
-  const handleChangeUidText = ({ currentTarget: { value } }) => {
-    setUidText(value)
-  }
-
-  const handleChangeDisplayNameText = ({ currentTarget: { value } }) => {
-    setDisplayNameText(value)
-  }
-
-  const handleSubmit = () => {
-    updateAuth(uidText, displayNameText, true)
-  }
-
-  const handleLogout = () => {
-    updateAuth("", "", false)
-  }
-
-  if (!isSignedIn) {
-    return (
-      <form onSubmit={handleSubmit}>
-        <div>Fake login (values will persist)</div>
-        <input
-          value={uidText}
-          onChange={handleChangeUidText}
-          placeholder="User id"
-          required
-        />
-        <input
-          value={displayNameText}
-          onChange={handleChangeDisplayNameText}
-          placeholder="Display name"
-          required
-        />
-        <button>Sign in</button>
-      </form>
-    )
-  }
-
-  return (
-    <div>
-      <div>{displayName}</div>
-      <div>Coins: {totalCoins}</div>
-      <div>
-        <button onClick={handleLogout}>Log out</button>
-      </div>
-      <div>{children}</div>
-    </div>
-  )
-}
-
 function App() {
   const {
     // auth
@@ -217,17 +169,8 @@ function App() {
     totalCoins,
   } = useApp()
 
-  if (isLoading) {
-    return (
-      <Layout
-        isSignedIn={isSignedIn}
-        displayName={displayName}
-        totalCoins={totalCoins}
-        updateAuth={updateAuth}
-      >
-        <div>loading...</div>
-      </Layout>
-    )
+  if (!isSignedIn) {
+    return <Auth updateAuth={updateAuth} />
   }
 
   return (
@@ -236,40 +179,23 @@ function App() {
       displayName={displayName}
       totalCoins={totalCoins}
       updateAuth={updateAuth}
+      isLoading={isLoading}
     >
-      {streak !== 0 && <div>current streak: {streak}</div>}
-      {streak === 0 && canClaimToday && <div>start claiming today</div>}
-      {streakError && <div>error: try again in a few minutes</div>}
-
-      <div>
-        <button
-          onClick={handleClaim}
-          disabled={!canClaimToday || isClaiming || claimed}
-        >
-          claim today
-        </button>
-      </div>
-      {isClaiming && <div>claiming...</div>}
-      {claimError && <div>You cannot claim any more coins today</div>}
-
-      {claimed && canClaimToday && (
-        <>
-          <div>You got {coins} coins!</div>
-          {!!bonus.length && (
-            <div>
-              <div>And a bonus!</div>
-              <ul>
-                {bonus.map((item, index) => (
-                  <li key={`${item.days}-${index}`}>
-                    Streak of {item.days} days, Bonus:{item.coins}!
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {newStreak && <div>And started a streak!</div>}
-        </>
-      )}
+      <Streak
+        streak={streak}
+        canClaimToday={canClaimToday}
+        streakError={streakError}
+      />
+      <Claim
+        handleClaim={handleClaim}
+        canClaimToday={canClaimToday}
+        isClaiming={isClaiming}
+        claimed={claimed}
+        claimError={claimError}
+        bonus={bonus}
+        coins={coins}
+        newStreak={newStreak}
+      />
     </Layout>
   )
 }
