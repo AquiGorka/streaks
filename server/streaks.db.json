@@ -1,1 +1,14 @@
-{}
+{
+  "Claims": [],
+  "Daily": 1,
+  "Bonus": [
+    {
+      "days": 7,
+      "coins": 1
+    },
+    {
+      "days": 30,
+      "coins": 1
+    }
+  ]
+}

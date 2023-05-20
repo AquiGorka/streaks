@@ -14,8 +14,13 @@ function get(collection) {
   return store.get(collection)
 }
 
+function set(collection, value) {
+  store.set(collection, value)
+}
+
 module.exports = {
   init,
   getAll,
   get,
+  set,
 }

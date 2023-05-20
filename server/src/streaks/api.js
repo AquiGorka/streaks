@@ -6,7 +6,7 @@ module.exports = () => {
 
   // routes
   api.get("/:uid", handler.get)
-  api.post("/", handler.post)
+  api.post("/:uid", handler.post)
 
   return api
 }
