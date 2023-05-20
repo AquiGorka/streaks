@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "data-store": "^4.0.3"
+    "data-store": "^4.0.3",
+    "date-fns": "^2.30.0"
   }
 }
