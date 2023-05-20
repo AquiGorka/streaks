@@ -5,7 +5,7 @@ module.exports = () => {
   const api = express.Router()
 
   // routes
-  api.get("/", handler.get)
+  api.get("/:uid", handler.get)
 
   return api
 }

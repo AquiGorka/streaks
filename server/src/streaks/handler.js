@@ -6,6 +6,7 @@ const db = require("../db")
 const CLAIMS = "Claims"
 const BONUS = "Bonus"
 const DAILY = "Daily"
+const COINS = "Coins"
 const WAY_IN_THE_FUTURE = new Date("3000-01-01")
 
 function computeCurrentStreak(dates) {
@@ -45,7 +46,8 @@ function get(req, res) {
   const streak = computeCurrentStreak(claims.map((claim) => claim.date))
   const claimedToday = hasClaimedToday(claimsByUser)
   const canClaimToday = !claimedToday
-  res.json({ streak, canClaimToday })
+
+  return res.json({ streak, canClaimToday })
 }
 
 function post(req, res) {
@@ -65,13 +67,15 @@ function post(req, res) {
   const streak = computeCurrentStreak(updatedClaims.map((claim) => claim.date))
   const coins = db.get(DAILY)
   const allBonus = db.getAll(BONUS)
-  const isThereABonus = allBonus.some((item) => streak % item.days === 0)
+  const allCoins = db.get(COINS)
+  const bonus = allBonus.filter((item) => streak % item.days === 0)
+  const allM = allBonus.map((i) => streak % i.days)
+  const newCoins =
+    (allCoins[uid] || 0) +
+    coins +
+    bonus.reduce((all, item) => all + item.coins, 0)
+  db.set(COINS, { ...allCoins, [uid]: newCoins })
 
-  if (!isThereABonus) {
-    return res.json({ streak, coins, bonus: [] })
-  }
-
-  const bonus = allBonus.filter((item) => (item) => streak % item.days === 0)
   return res.send({ streak, coins, bonus })
 }
 
