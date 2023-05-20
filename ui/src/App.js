@@ -45,11 +45,14 @@ function useClaim({ uid, updateStreak }) {
   const [newStreak, setNewStreak] = useState(false)
 
   const handleClaim = async () => {
+    if (!uid) {
+      return
+    }
+
     try {
       setIsClaiming(true)
-      const res = await fetch("http://localhost:3000/auth/streak", {
+      const res = await fetch(`http://localhost:3000/auth/streaks/${uid}`, {
         method: "POST",
-        body: JSON.stringify({ uid }),
       })
       const { streak, coins, bonus } = await res.json()
       setCoins(coins)
@@ -86,7 +89,7 @@ function useAuth() {
 function useApp() {
   const Auth = useAuth()
   const Streak = useStreak({ uid: Auth.uid })
-  const Claim = useClaim({ updateStreak: Streak.updateStreak })
+  const Claim = useClaim({ uid: Auth.uid, updateStreak: Streak.updateStreak })
 
   return { ...Auth, ...Streak, ...Claim }
 }
@@ -131,11 +134,14 @@ function App() {
   return (
     <Layout isSignedIn={isSignedIn} displayName={displayName}>
       {streak !== 0 && <div>current streak: {streak}</div>}
-      {streak === 0 && <div>start claiming today</div>}
+      {streak === 0 && canClaimToday && <div>start claiming today</div>}
       {streakError && <div>error: try again in a few minutes</div>}
 
       <div>
-        <button onClick={handleClaim} disabled={!canClaimToday}>
+        <button
+          onClick={handleClaim}
+          disabled={!canClaimToday || isClaiming || claimed}
+        >
           claim today
         </button>
       </div>
@@ -145,14 +151,18 @@ function App() {
       {claimed && canClaimToday && (
         <>
           <div>You got {coins} coins!</div>
-          <div>
-            <div>And a bonus!</div>
-            <ul>
-              {bonus.map((item, index) => (
-                <li key={`${item}-${index}`}>{item}</li>
-              ))}
-            </ul>
-          </div>
+          {!!bonus.length && (
+            <div>
+              <div>And a bonus!</div>
+              <ul>
+                {bonus.map((item, index) => (
+                  <li key={`${item.days}-${index}`}>
+                    Streak of {item.days} days, Bonus:{item.coins}!
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {newStreak && <div>And started a streak!</div>}
         </>
       )}
