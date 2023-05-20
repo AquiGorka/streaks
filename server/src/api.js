@@ -1,9 +1,13 @@
 const express = require("express")
 const cors = require("cors")
+const db = require("./db")
 const auth = require("./auth/api")
 
 module.exports = () => {
   const api = express.Router()
+
+  // services
+  db.init()
 
   // middleware
   api.use(cors())
